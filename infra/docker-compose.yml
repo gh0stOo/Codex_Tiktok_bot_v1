@@ -1,0 +1,87 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: codex
+      POSTGRES_PASSWORD: codex
+      POSTGRES_DB: codex
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+  backend:
+    build: ../backend
+    depends_on:
+      - db
+      - redis
+    environment:
+      DATABASE_URL: postgresql+psycopg2://codex:codex@db:5432/codex
+      REDIS_URL: redis://redis:6379/0
+      BROKER_URL: redis://redis:6379/1
+      STORAGE_PATH: /data/storage
+      USE_MOCK_PROVIDERS: "false"
+      SECRET_KEY: dev-secret
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../backend/app:/app/app
+      - storage:/data/storage
+      - ../migrations:/app/migrations
+  worker:
+    build: ../backend
+    command: ["celery", "-A", "app.celery_app.celery", "worker", "-l", "info"]
+    depends_on:
+      - backend
+      - redis
+    environment:
+      DATABASE_URL: postgresql+psycopg2://codex:codex@db:5432/codex
+      REDIS_URL: redis://redis:6379/0
+      BROKER_URL: redis://redis:6379/1
+      USE_MOCK_PROVIDERS: "false"
+    volumes:
+      - ../backend/app:/app/app
+      - ../migrations:/app/migrations
+  scheduler:
+    build: ../backend
+    command: ["celery", "-A", "app.celery_app.celery", "beat", "-l", "info"]
+    depends_on:
+      - backend
+      - redis
+    environment:
+      DATABASE_URL: postgresql+psycopg2://codex:codex@db:5432/codex
+      REDIS_URL: redis://redis:6379/0
+      BROKER_URL: redis://redis:6379/1
+      USE_MOCK_PROVIDERS: "false"
+    volumes:
+      - ../backend/app:/app/app
+      - ../migrations:/app/migrations
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    profiles:
+      - storage
+    environment:
+      MINIO_ACCESS_KEY: minio
+      MINIO_SECRET_KEY: minio123
+    ports:
+      - "9100:9000"
+      - "9101:9001"
+    volumes:
+      - minio-data:/data
+  frontend:
+    build: ../frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_BACKEND_URL: http://localhost:8000
+volumes:
+  db-data:
+  storage:
+  minio-data:
