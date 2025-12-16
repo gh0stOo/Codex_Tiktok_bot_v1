@@ -1,15 +1,25 @@
 compose := docker compose -f infra/docker-compose.yml
+compose-dev := docker compose -f infra/docker-compose.dev.yml
 
-.PHONY: up down logs test lint format migrate seed
+.PHONY: up up-dev down down-dev logs logs-dev test lint format migrate seed
 
 up:
 	$(compose) up --build -d
 
+up-dev:
+	$(compose-dev) up --build -d
+
 down:
 	$(compose) down
 
+down-dev:
+	$(compose-dev) down
+
 logs:
 	$(compose) logs -f
+
+logs-dev:
+	$(compose-dev) logs -f
 
 test:
 	cd backend && pytest -q
