@@ -16,7 +16,7 @@ settings = get_settings()
 def oauth_start(org_id: str = Query(...), db: Session = Depends(get_db), user=Depends(get_current_user)):
     assert_org_member(db, user, org_id, roles=["owner", "admin"])
     try:
-        client = TikTokClient()
+        client = TikTokClient(organization_id=org_id)
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     nonce = secrets.token_urlsafe(12)
@@ -31,7 +31,7 @@ async def oauth_callback(code: str = Query(...), state: str = Query(...), db: Se
         raise HTTPException(status_code=400, detail="Invalid state")
     org_id, _nonce = state.split(":", 1)
     assert_org_member(db, user, org_id, roles=["owner", "admin"])
-    client = TikTokClient()
+    client = TikTokClient(organization_id=org_id)
     token_data = await client.exchange_code(code)
     access = token_data.get("data", {}).get("access_token")
     refresh = token_data.get("data", {}).get("refresh_token")
@@ -89,7 +89,7 @@ async def refresh_token(org_id: str, db: Session = Depends(get_db), user=Depends
     refresh = decrypt_secret(token_row.refresh_token, settings.fernet_secret)
     if not refresh:
         raise HTTPException(status_code=400, detail="No refresh token available")
-    client = TikTokClient()
+    client = TikTokClient(organization_id=org_id)
     resp = await client.refresh(refresh)
     new_access = resp.get("data", {}).get("access_token")
     new_refresh = resp.get("data", {}).get("refresh_token", refresh)

@@ -67,6 +67,14 @@ class Project(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     autopilot_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    # Legacy: Video-Generierung Einstellungen (für Script-Generierung, wird jetzt nicht mehr verwendet)
+    video_provider: Mapped[str | None] = mapped_column(String(50), nullable=True)  # "openrouter" oder "falai"
+    video_model_id: Mapped[str | None] = mapped_column(String(255), nullable=True)  # z.B. "fal-ai/whisper" oder "openrouter/auto"
+    video_credential_id: Mapped[str | None] = mapped_column(ForeignKey("credentials.id"), nullable=True)  # Optional: spezifisches Credential
+    # Neue: Video-Generierung Einstellungen (für Text-to-Video APIs)
+    video_generation_provider: Mapped[str | None] = mapped_column(String(50), nullable=True)  # "falai" für Video-Generierung
+    video_generation_model_id: Mapped[str | None] = mapped_column(String(255), nullable=True)  # z.B. "fal-ai/kling-video/v2.6/pro/text-to-video"
+    video_generation_credential_id: Mapped[str | None] = mapped_column(ForeignKey("credentials.id"), nullable=True)  # Optional: spezifisches Credential für Video-Generierung
 
     organization: Mapped[Organization] = relationship("Organization", back_populates="projects")
     plans: Mapped[list["Plan"]] = relationship("Plan", back_populates="project")
@@ -84,6 +92,20 @@ class Plan(Base):
     approved: Mapped[bool] = mapped_column(Boolean, default=False)
     locked: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    
+    # Neue Felder für Content-Plan
+    category: Mapped[str | None] = mapped_column(String(100), nullable=True)  # z.B. "faceless_tiktok"
+    topic: Mapped[str | None] = mapped_column(String(500), nullable=True)  # Hauptthema für diesen Slot
+    script_content: Mapped[str | None] = mapped_column(Text, nullable=True)  # Vollständiges Script mit Hook
+    hook: Mapped[str | None] = mapped_column(String(500), nullable=True)  # Hook separat
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)  # Video-Titel
+    cta: Mapped[str | None] = mapped_column(String(255), nullable=True)  # Call-to-Action
+    # Visuelle Felder für Video-Generierung
+    visual_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)  # Detaillierte visuelle Beschreibung
+    lighting: Mapped[str | None] = mapped_column(String(100), nullable=True)  # z.B. "soft natural", "dramatic", "ring light"
+    composition: Mapped[str | None] = mapped_column(String(200), nullable=True)  # z.B. "close-up", "medium shot", "wide angle"
+    camera_angles: Mapped[str | None] = mapped_column(String(200), nullable=True)  # z.B. "eye-level", "low angle", "overhead"
+    visual_style: Mapped[str | None] = mapped_column(String(100), nullable=True)  # z.B. "minimalist", "vibrant", "cinematic"
 
     project: Mapped[Project] = relationship("Project", back_populates="plans")
 
@@ -139,13 +161,18 @@ class VideoAsset(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
-    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), nullable=False)
+    project_id: Mapped[str | None] = mapped_column(ForeignKey("projects.id"), nullable=True)  # Optional für org-level Assets
     plan_id: Mapped[str | None] = mapped_column(ForeignKey("plans.id"), nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="generated")
     video_path: Mapped[str] = mapped_column(String(500))
     thumbnail_path: Mapped[str] = mapped_column(String(500))
     transcript: Mapped[str | None] = mapped_column(Text, nullable=True)
     publish_response: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Übersetzungs-Felder (für YouTube Video-Übersetzung)
+    original_language: Mapped[str | None] = mapped_column(String(10), nullable=True)  # z.B. "en", "de"
+    translated_language: Mapped[str | None] = mapped_column(String(10), nullable=True)  # z.B. "de", "en"
+    voice_clone_model_id: Mapped[str | None] = mapped_column(String(255), nullable=True)  # z.B. "rask/voice-clone-v1"
+    translation_provider: Mapped[str | None] = mapped_column(String(50), nullable=True)  # z.B. "rask", "heygen", "elevenlabs"
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
@@ -154,7 +181,7 @@ class Job(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
-    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), nullable=False)
+    project_id: Mapped[str | None] = mapped_column(ForeignKey("projects.id"), nullable=True)  # Optional für org-level Jobs
     type: Mapped[str] = mapped_column(String(100), nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="pending")
     idempotency_key: Mapped[str | None] = mapped_column(String(255), nullable=True)

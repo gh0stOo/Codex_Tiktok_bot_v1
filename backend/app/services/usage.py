@@ -25,11 +25,6 @@ def log_usage(db: Session, organization_id: str, metric: str, amount: int = 1):
 def enforce_quota(db: Session, organization_id: str, metric: str, limit: int | None = None):
     limit = limit or DEFAULT_LIMITS.get(metric, DEFAULT_LIMITS["video_generation"])
     start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    total = (
-        db.query(models.UsageLedger)
-        .filter(models.UsageLedger.organization_id == organization_id, models.UsageLedger.metric == metric, models.UsageLedger.created_at >= start)
-        .count()
-    )
     # concurrency check special-case
     if metric == "concurrent_jobs":
         active = (
@@ -38,5 +33,18 @@ def enforce_quota(db: Session, organization_id: str, metric: str, limit: int | N
             .count()
         )
         total = active
+    else:
+        # FIX: Use sum(amount) instead of count() to correctly enforce quotas
+        from sqlalchemy import func
+        result = (
+            db.query(func.sum(models.UsageLedger.amount))
+            .filter(
+                models.UsageLedger.organization_id == organization_id,
+                models.UsageLedger.metric == metric,
+                models.UsageLedger.created_at >= start,
+            )
+            .scalar()
+        )
+        total = result if result is not None else 0
     if total >= limit:
-        raise QuotaExceeded(f"Quota exceeded for {metric}")
+        raise QuotaExceeded(f"Quota exceeded for {metric}: {total}/{limit}")

@@ -43,3 +43,4 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "Prüfe die Logs: docker compose -f infra/docker-compose.dev.yml logs" -ForegroundColor Yellow
 }
 
+

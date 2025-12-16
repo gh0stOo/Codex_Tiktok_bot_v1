@@ -38,7 +38,16 @@ class LocalStorage(StorageProvider):
     def save_file(self, key: str, local_path: str) -> str:
         dest = self._full_path(key)
         dest.parent.mkdir(parents=True, exist_ok=True)
-        Path(local_path).replace(dest)
+        # FIX: Handle case where dest already exists (Windows replace() can fail)
+        try:
+            if dest.exists():
+                dest.unlink()  # Remove existing file first
+            Path(local_path).replace(dest)
+        except Exception as e:
+            # Fallback: copy instead of replace
+            import shutil
+            shutil.copy2(local_path, dest)
+            Path(local_path).unlink(missing_ok=True)  # Clean up source
         return str(dest)
 
     def save_bytes(self, key: str, content: bytes) -> str:

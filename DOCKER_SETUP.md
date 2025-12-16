@@ -90,3 +90,4 @@ Nach dem ersten Start:
 docker compose -f infra/docker-compose.dev.yml exec backend sh -c "cd /app/migrations && PYTHONPATH=/app alembic upgrade head"
 ```
 
+

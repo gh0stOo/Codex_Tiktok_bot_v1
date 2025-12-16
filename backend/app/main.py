@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .config import get_settings
@@ -6,10 +7,21 @@ from .routers import auth, orgs, projects, plans, video, analytics, health, cred
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version="0.1.0")
 
+# CORS configuration - restrict to specific origins in production
+allowed_origins = ["*"]  # Default: allow all (for development)
+if settings.environment == "production":
+    # In production, set CORS_ORIGINS environment variable with comma-separated origins
+    cors_env = os.getenv("CORS_ORIGINS", "")
+    if cors_env:
+        allowed_origins = [origin.strip() for origin in cors_env.split(",")]
+    else:
+        # If not set, default to empty list (no CORS) - must be explicitly configured
+        allowed_origins = []
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
+    allow_origins=allowed_origins,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     allow_credentials=True,
 )

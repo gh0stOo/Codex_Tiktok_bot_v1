@@ -30,9 +30,9 @@ class Settings(BaseModel):
     log_level: str = Field(default="INFO")
     demo_email: str = Field(default="demo@codex.dev")
     demo_password: str = Field(default="demopass123")
-    fernet_secret: str = Field(default="change-me-fernet-key")
-    access_token_exp_minutes: int = Field(default=15)
-    refresh_token_exp_days: int = Field(default=14)
+    fernet_secret: str = Field(default="", description="REQUIRED: Fernet encryption key for secrets. Must be set via environment variable.")
+    access_token_exp_minutes: int = Field(default=1440)  # 24 Stunden (statt 15 Minuten)
+    refresh_token_exp_days: int = Field(default=30)  # 30 Tage (statt 14)
 
     class Config:
         env_file = ".env"
@@ -46,4 +46,13 @@ def get_settings() -> Settings:
         env_key = field.upper()
         if env_key in os.environ:
             data[field] = os.environ[env_key]
-    return Settings(**data)
+    settings = Settings(**data)
+    
+    # Validate critical security settings
+    if not settings.fernet_secret or settings.fernet_secret == "change-me-fernet-key":
+        raise ValueError(
+            "FERNET_SECRET must be set via environment variable. "
+            "Generate a key with: python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'"
+        )
+    
+    return settings
