@@ -60,30 +60,20 @@ services:
     volumes:
       - ../backend/app:/app/app
       - ../migrations:/app/migrations
-  minio:
-    image: minio/minio
-    command: server /data --console-address ":9001"
-    profiles:
-      - storage
-    environment:
-      MINIO_ACCESS_KEY: minio
-      MINIO_SECRET_KEY: minio123
-    ports:
-      - "9100:9000"
-      - "9101:9001"
-    volumes:
-      - minio-data:/data
   frontend:
     build:
       context: ../frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     depends_on:
       - backend
     ports:
-      - "80:80"
+      - "5173:5173"
     environment:
       VITE_BACKEND_URL: http://backend:8000
+    volumes:
+      - ../frontend/src:/app/src
+      - ../frontend/public:/app/public
 volumes:
   db-data:
   storage:
-  minio-data:
+

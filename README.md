@@ -6,11 +6,27 @@ Production-shaped SaaS for TikTok automation per `projektplan.md`: FastAPI + Cel
 - Auth/Sessions mit Refresh-Rotation, RBAC-Checks, org-scope auf Kernobjekten (Plans/Assets). Weitere Features (TikTok Publish/Metrics, Orchestrator/LLM/RAG, UI, Quotas) werden iterativ ergänzt; siehe `CHANGELOG_AUTONOMOUS.md`.
 
 ## Schnellstart (Docker)
+
+### Production Mode (Standard)
 ```bash
 docker compose -f infra/docker-compose.yml up --build -d
 docker compose -f infra/docker-compose.yml exec backend sh -c "cd /app/migrations && PYTHONPATH=/app alembic upgrade head"
 ```
-Health: `curl http://localhost:8000/health/healthz`
+- Frontend: http://localhost (Port 80) - Production Build mit nginx
+- Backend: http://localhost:8000
+- Health: `curl http://localhost:8000/health/healthz`
+
+### Development Mode
+```bash
+docker compose -f infra/docker-compose.dev.yml up --build -d
+docker compose -f infra/docker-compose.dev.yml exec backend sh -c "cd /app/migrations && PYTHONPATH=/app alembic upgrade head"
+```
+- Frontend: http://localhost:5173 - Vite Dev Server mit Hot Reload
+- Backend: http://localhost:8000
+
+**Unterschiede Dev vs Production:**
+- **Dev**: Vite Dev Server, Hot Reload, Source Maps, keine Optimierung, Port 5173
+- **Production**: Build der statischen Dateien, nginx Webserver, optimiert & minified, Port 80
 
 ## Lokal (ohne Docker)
 ```bash
