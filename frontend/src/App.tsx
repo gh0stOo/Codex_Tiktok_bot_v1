@@ -924,6 +924,20 @@ function App() {
         ? `Geschätzte Kosten: ${model.currency} ${resp.data.estimated_cost?.toFixed(4) || "0.0000"}`
         : "";
       setStatus(`${resp.data.message || "Transcription gestartet"} ${costInfo}`);
+      
+      // Lade Jobs neu, damit der neue Transcription-Job in der Queue sichtbar ist
+      if (projectId) {
+        try {
+          const jobsResp = await api.get(`/jobs/${projectId}`, { headers });
+          setJobs(jobsResp.data.jobs || []);
+          // Starte Polling, falls noch nicht aktiv
+          if (!jobStatusPolling) {
+            startJobStatusPolling();
+          }
+        } catch (e: any) {
+          console.error("Load jobs error:", e);
+        }
+      }
     } catch (e: any) {
       console.error("Transcribe error:", e);
       setStatus(e?.response?.data?.detail || "Fehler bei der Transcription");
@@ -967,6 +981,20 @@ function App() {
         { headers }
       );
       setStatus(resp.data.message || "Video-Übersetzung gestartet");
+      
+      // Lade Jobs neu, damit der neue Translation-Job in der Queue sichtbar ist
+      if (projectId) {
+        try {
+          const jobsResp = await api.get(`/jobs/${projectId}`, { headers });
+          setJobs(jobsResp.data.jobs || []);
+          // Starte Polling, falls noch nicht aktiv
+          if (!jobStatusPolling) {
+            startJobStatusPolling();
+          }
+        } catch (e: any) {
+          console.error("Load jobs error:", e);
+        }
+      }
     } catch (e: any) {
       console.error("Translate video error:", e);
       setStatus(e?.response?.data?.detail || "Fehler bei der Video-Übersetzung");
